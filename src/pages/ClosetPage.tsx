@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { AppLayout } from "@/components/AppLayout";
-import { useCloset } from "@/hooks/useCloset";
+import { useCloset, uploadClothingPhoto } from "@/hooks/useCloset";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,8 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ClothingItem, CATEGORIES, SEASONS, STYLES, COLORS, Category, Season, Style, Color } from "@/types/closet";
-import { Plus, Trash2, Heart, Shirt, Search } from "lucide-react";
+import { Plus, Trash2, Heart, Shirt, Search, Camera, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 
 const CATEGORY_COLORS: Record<string, string> = {
   'Hauts': 'bg-blue-100 text-blue-700',
@@ -33,10 +34,24 @@ const emptyForm = () => ({
 
 export default function ClosetPage() {
   const { items, loading, addItem, deleteItem, toggleFavorite } = useCloset();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm());
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState('all');
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setPhotoPreview(URL.createObjectURL(file));
+    setUploadingPhoto(true);
+    const url = await uploadClothingPhoto(file, user.id);
+    if (url) setForm(f => ({ ...f, image_url: url }));
+    setUploadingPhoto(false);
+  };
 
   const filtered = useMemo(() => items.filter(i => {
     const matchSearch = i.name.toLowerCase().includes(search.toLowerCase());
@@ -48,6 +63,7 @@ export default function ClosetPage() {
     if (!form.name) return;
     await addItem(form);
     setForm(emptyForm());
+    setPhotoPreview(null);
     setOpen(false);
   };
 
@@ -109,8 +125,41 @@ export default function ClosetPage() {
                   </div>
                 </div>
                 <div>
-                  <Label>URL photo (optionnel)</Label>
-                  <Input value={form.image_url} onChange={e => setForm({ ...form, image_url: e.target.value })} placeholder="https://..." />
+                  <Label>Photo</Label>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={handlePhotoChange}
+                  />
+                  {photoPreview ? (
+                    <div className="relative mt-1">
+                      <img src={photoPreview} alt="Aperçu" className="w-full h-40 object-cover rounded-lg border" />
+                      {uploadingPhoto && (
+                        <div className="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center">
+                          <Loader2 className="h-6 w-6 animate-spin text-white" />
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="absolute bottom-2 right-2 bg-white/90 text-xs font-medium px-2 py-1 rounded-md shadow"
+                      >
+                        Changer
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="mt-1 w-full h-24 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-1.5 text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                    >
+                      <Camera className="h-6 w-6" />
+                      <span className="text-xs font-medium">Prendre une photo ou choisir</span>
+                    </button>
+                  )}
                 </div>
                 <Button onClick={handleSave} className="w-full">Ajouter au dressing</Button>
               </div>
