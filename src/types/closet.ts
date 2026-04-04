@@ -34,6 +34,7 @@ export interface ClothingItem {
   id: string;
   user_id: string;
   name: string;
+  brand?: string;
   category: Category;
   color: Color;
   style: Style;

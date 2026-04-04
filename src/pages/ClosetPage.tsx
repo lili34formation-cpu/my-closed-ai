@@ -13,6 +13,7 @@ import { useAuth } from "@/context/AuthContext";
 
 const emptyForm = () => ({
   name: '',
+  brand: '',
   category: 'Hauts' as Category,
   color: 'Noir' as Color,
   style: 'Casual' as Style,
@@ -163,6 +164,7 @@ export default function ClosetPage() {
               {/* Infos */}
               <div className="p-3">
                 <p className="font-semibold text-sm truncate text-foreground">{item.name}</p>
+                {item.brand && <p className="text-[10px] text-primary font-medium truncate">{item.brand}</p>}
                 <p className="text-[11px] text-muted-foreground mt-0.5">{item.color} · {item.category}</p>
               </div>
             </div>
@@ -228,15 +230,26 @@ export default function ClosetPage() {
               )}
             </div>
 
-            {/* Nom */}
-            <div>
-              <Label className="text-foreground">Nom du vêtement</Label>
-              <Input
-                value={form.name}
-                onChange={e => setForm({ ...form, name: e.target.value })}
-                placeholder="Ex: Jean slim noir"
-                className="mt-1 bg-secondary border-border text-foreground placeholder:text-muted-foreground"
-              />
+            {/* Nom + Marque */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-foreground">Nom</Label>
+                <Input
+                  value={form.name}
+                  onChange={e => setForm({ ...form, name: e.target.value })}
+                  placeholder="Ex: Jean slim"
+                  className="mt-1 bg-secondary border-border text-foreground placeholder:text-muted-foreground"
+                />
+              </div>
+              <div>
+                <Label className="text-foreground">Marque</Label>
+                <Input
+                  value={form.brand}
+                  onChange={e => setForm({ ...form, brand: e.target.value })}
+                  placeholder="Ex: Zara, H&M..."
+                  className="mt-1 bg-secondary border-border text-foreground placeholder:text-muted-foreground"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
