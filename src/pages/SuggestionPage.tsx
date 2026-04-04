@@ -1,30 +1,15 @@
 import { useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useCloset } from "@/hooks/useCloset";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MOODS, PLANNING_TYPES, ClothingItem } from "@/types/closet";
 import { Sparkles, Loader2, Shirt, RefreshCw, Cloud, Sun, CloudRain, Thermometer, ThumbsDown, ThumbsUp, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-interface Weather {
-  temp: number;
-  description: string;
-  icon: string;
-}
-
-interface Outfit {
-  name: string;
-  itemIds: string[];
-  reasoning: string;
-  trendScore: number;
-}
-
-interface SuggestionResult {
-  outfits: Outfit[];
-  trendTip: string;
-}
+interface Weather { temp: number; description: string; icon: string; }
+interface Outfit { name: string; itemIds: string[]; reasoning: string; trendScore: number; }
+interface SuggestionResult { outfits: Outfit[]; trendTip: string; }
 
 export default function SuggestionPage() {
   const { items, incrementWorn } = useCloset();
@@ -51,14 +36,9 @@ export default function SuggestionPage() {
         else if (code >= 45) description = 'Nuageux';
         else if (code >= 1) description = 'Partiellement nuageux';
         setWeather({ temp, description, icon: code >= 61 ? 'rain' : code >= 1 ? 'cloud' : 'sun' });
-      } catch {
-        toast.error('Impossible de récupérer la météo');
-      }
+      } catch { toast.error('Impossible de récupérer la météo'); }
       setLoadingWeather(false);
-    }, () => {
-      toast.error('Géolocalisation refusée');
-      setLoadingWeather(false);
-    });
+    }, () => { toast.error('Géolocalisation refusée'); setLoadingWeather(false); });
   };
 
   const getSuggestion = async () => {
@@ -68,7 +48,6 @@ export default function SuggestionPage() {
     setResult(null);
     setRejectedOutfits(new Set());
     setWornOutfit(null);
-
     try {
       const { data, error } = await supabase.functions.invoke('suggest-outfit', {
         body: {
@@ -79,17 +58,14 @@ export default function SuggestionPage() {
       });
       if (error) throw error;
       setResult(data);
-    } catch (e) {
-      console.error(e);
-      toast.error('Erreur lors de la suggestion IA');
-    }
+    } catch (e) { console.error(e); toast.error('Erreur lors de la suggestion IA'); }
     setLoadingSuggestion(false);
   };
 
   const rejectOutfit = (idx: number) => {
     setRejectedOutfits(prev => new Set([...prev, idx]));
     const remaining = result!.outfits.filter((_, i) => i !== idx && !rejectedOutfits.has(i));
-    if (remaining.length === 0) toast.info('Tu as refusé toutes les tenues ! Relance une suggestion.');
+    if (remaining.length === 0) toast.info('Toutes les tenues refusées ! Relance une suggestion.');
   };
 
   const wearOutfit = async (idx: number, outfit: Outfit) => {
@@ -98,119 +74,126 @@ export default function SuggestionPage() {
       const item = items.find(i => i.id === id);
       if (item) await incrementWorn(item);
     }
-    toast.success(`Super choix ! "${outfit.name}" enregistrée comme portée 👗`);
+    toast.success(`"${outfit.name}" enregistrée 👗`);
   };
 
   const getOutfitItems = (outfit: Outfit): ClothingItem[] =>
     outfit.itemIds.map(id => items.find(i => i.id === id)).filter(Boolean) as ClothingItem[];
 
   const visibleOutfits = result?.outfits.filter((_, i) => !rejectedOutfits.has(i)) ?? [];
-
   const WeatherIcon = weather?.icon === 'rain' ? CloudRain : weather?.icon === 'cloud' ? Cloud : Sun;
 
   return (
     <AppLayout>
-      <div className="space-y-4 max-w-2xl mx-auto">
+      <div className="space-y-5">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Que porter aujourd'hui ?</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">L'IA te propose 3 tenues adaptées à ta journée</p>
+          <h1 className="font-display text-3xl font-bold text-foreground">Que porter ?</h1>
+          <p className="text-muted-foreground text-sm mt-1">L'IA compose tes tenues</p>
         </div>
 
         {/* Météo */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Thermometer className="h-4 w-4 text-blue-500" />Météo du jour
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {weather ? (
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-50">
-                  <WeatherIcon className="h-6 w-6 text-blue-500" />
-                  <div>
-                    <p className="text-2xl font-bold text-blue-700">{weather.temp}°C</p>
-                    <p className="text-xs text-blue-500">{weather.description}</p>
-                  </div>
+        <div className="bg-gradient-to-br from-blue-900/40 to-indigo-900/20 rounded-2xl p-4 border border-blue-800/30">
+          <div className="flex items-center gap-2 mb-3">
+            <Thermometer className="h-4 w-4 text-blue-400" />
+            <span className="text-sm font-semibold text-blue-300">Météo du jour</span>
+          </div>
+          {weather ? (
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <WeatherIcon className="h-8 w-8 text-blue-300" />
+                <div>
+                  <p className="text-3xl font-bold text-white">{weather.temp}°C</p>
+                  <p className="text-xs text-blue-300">{weather.description}</p>
                 </div>
-                <Button variant="outline" size="sm" onClick={getWeather}>
-                  <RefreshCw className="h-3 w-3 mr-1" />Actualiser
-                </Button>
               </div>
-            ) : (
-              <Button variant="outline" onClick={getWeather} disabled={loadingWeather}>
-                {loadingWeather ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Cloud className="h-4 w-4 mr-2" />}
-                Récupérer ma météo
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+              <button onClick={getWeather} className="ml-auto glass text-xs text-muted-foreground px-3 py-1.5 rounded-full flex items-center gap-1.5">
+                <RefreshCw className="h-3 w-3" />Actualiser
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={getWeather}
+              disabled={loadingWeather}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-blue-800/40 text-blue-300 text-sm hover:bg-blue-900/20 transition-colors"
+            >
+              {loadingWeather ? <Loader2 className="h-4 w-4 animate-spin" /> : <Cloud className="h-4 w-4" />}
+              Récupérer ma météo
+            </button>
+          )}
+        </div>
 
         {/* Humeur */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Comment tu te sens ? ✨</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {MOODS.map(m => (
-                <button key={m.value} onClick={() => setMood(m.value)}
-                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all ${mood === m.value ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'}`}>
-                  <span className="text-2xl">{m.emoji}</span>
-                  <span className="text-xs font-medium text-center leading-tight">{m.label}</span>
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <div>
+          <p className="text-sm font-semibold text-foreground mb-3">Comment tu te sens ? ✨</p>
+          <div className="grid grid-cols-2 gap-2">
+            {MOODS.map(m => (
+              <button
+                key={m.value}
+                onClick={() => setMood(m.value)}
+                className={`flex items-center gap-3 p-3 rounded-2xl border-2 transition-all text-left ${
+                  mood === m.value
+                    ? 'border-primary bg-accent text-foreground'
+                    : 'border-border bg-card text-muted-foreground hover:border-primary/40'
+                }`}
+              >
+                <span className="text-2xl">{m.emoji}</span>
+                <span className="text-sm font-medium">{m.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Planning */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Ton planning du jour 📅</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {PLANNING_TYPES.map(p => (
-                <button key={p.value} onClick={() => setPlanning(p.value)}
-                  className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all ${planning === p.value ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'}`}>
-                  <span className="text-2xl">{p.emoji}</span>
-                  <span className="text-xs font-medium text-center leading-tight">{p.label}</span>
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <div>
+          <p className="text-sm font-semibold text-foreground mb-3">Ta journée 📅</p>
+          <div className="grid grid-cols-2 gap-2">
+            {PLANNING_TYPES.map(p => (
+              <button
+                key={p.value}
+                onClick={() => setPlanning(p.value)}
+                className={`flex items-center gap-3 p-3 rounded-2xl border-2 transition-all text-left ${
+                  planning === p.value
+                    ? 'border-primary bg-accent text-foreground'
+                    : 'border-border bg-card text-muted-foreground hover:border-primary/40'
+                }`}
+              >
+                <span className="text-2xl">{p.emoji}</span>
+                <span className="text-sm font-medium">{p.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
 
-        {/* Bouton */}
-        <Button size="lg" className="w-full h-14 text-base font-bold rounded-xl" onClick={getSuggestion} disabled={loadingSuggestion || !mood || !planning}>
+        {/* Bouton IA */}
+        <button
+          onClick={getSuggestion}
+          disabled={loadingSuggestion || !mood || !planning}
+          className="w-full h-14 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-base flex items-center justify-center gap-2 shadow-lg shadow-purple-900/40 transition-all"
+        >
           {loadingSuggestion ? (
-            <><Loader2 className="h-5 w-5 animate-spin mr-2" />L'IA choisit tes tenues...</>
+            <><Loader2 className="h-5 w-5 animate-spin" />L'IA choisit tes tenues...</>
           ) : (
-            <><Sparkles className="h-5 w-5 mr-2" />Suggère mes tenues !</>
+            <><Sparkles className="h-5 w-5" />Suggère mes tenues !</>
           )}
-        </Button>
+        </button>
 
         {/* Résultats */}
         {result && (
           <div className="space-y-4">
-            {/* Conseil tendance */}
             {result.trendTip && (
-              <div className="flex items-start gap-3 p-3 rounded-xl bg-purple-50 border border-purple-200">
-                <TrendingUp className="h-4 w-4 text-purple-500 mt-0.5 shrink-0" />
-                <p className="text-sm text-purple-700 font-medium">{result.trendTip}</p>
+              <div className="flex items-start gap-3 p-4 rounded-2xl bg-gradient-to-br from-purple-900/40 to-pink-900/20 border border-purple-800/30">
+                <TrendingUp className="h-4 w-4 text-purple-400 mt-0.5 shrink-0" />
+                <p className="text-sm text-purple-200 font-medium">{result.trendTip}</p>
               </div>
             )}
 
             {visibleOutfits.length === 0 ? (
-              <Card>
-                <CardContent className="py-10 text-center">
-                  <p className="text-muted-foreground mb-3">Tu as refusé toutes les tenues !</p>
-                  <Button onClick={getSuggestion} variant="outline">
-                    <RefreshCw className="h-4 w-4 mr-2" />Nouvelles suggestions
-                  </Button>
-                </CardContent>
-              </Card>
+              <div className="text-center py-10">
+                <p className="text-muted-foreground mb-4">Tu as refusé toutes les tenues !</p>
+                <button onClick={getSuggestion} className="glass text-foreground px-6 py-3 rounded-xl text-sm font-medium">
+                  <RefreshCw className="h-4 w-4 inline mr-2" />Nouvelles suggestions
+                </button>
+              </div>
             ) : (
               result.outfits.map((outfit, idx) => {
                 if (rejectedOutfits.has(idx)) return null;
@@ -218,68 +201,86 @@ export default function SuggestionPage() {
                 const isWorn = wornOutfit === idx;
 
                 return (
-                  <Card key={idx} className={`border-2 transition-all ${isWorn ? 'border-green-400 bg-green-50' : 'border-primary/20'}`}>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <Sparkles className="h-4 w-4 text-primary" />
-                          {outfit.name}
-                        </CardTitle>
-                        <div className="flex items-center gap-1.5">
-                          <TrendingUp className="h-3.5 w-3.5 text-purple-500" />
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${outfit.trendScore >= 80 ? 'bg-purple-100 text-purple-700' : outfit.trendScore >= 60 ? 'bg-blue-100 text-blue-700' : 'bg-muted text-muted-foreground'}`}>
-                            Tendance {outfit.trendScore}%
-                          </span>
+                  <div key={idx} className={`rounded-2xl border overflow-hidden transition-all ${isWorn ? 'border-emerald-500/50 bg-emerald-900/10' : 'border-border bg-card'}`}>
+                    {/* Header tenue */}
+                    <div className="p-4 border-b border-border/50">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h3 className="font-display text-lg font-bold text-foreground flex items-center gap-2">
+                            <Sparkles className="h-4 w-4 text-primary" />
+                            {outfit.name}
+                          </h3>
+                          <p className="text-xs text-muted-foreground italic mt-1">"{outfit.reasoning}"</p>
                         </div>
+                        <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full ${outfit.trendScore >= 80 ? 'bg-purple-900/60 text-purple-300' : outfit.trendScore >= 60 ? 'bg-blue-900/60 text-blue-300' : 'bg-card text-muted-foreground'}`}>
+                          🔥 {outfit.trendScore}%
+                        </span>
                       </div>
-                      <p className="text-sm text-muted-foreground italic mt-1">"{outfit.reasoning}"</p>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {outfitItems.length > 0 ? (
-                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                          {outfitItems.map(item => (
-                            <div key={item.id} className="text-center">
+                    </div>
+
+                    {/* Photos lookbook */}
+                    {outfitItems.length > 0 ? (
+                      <div className="p-4">
+                        <div className={`grid gap-2 ${outfitItems.length === 1 ? 'grid-cols-1' : outfitItems.length === 2 ? 'grid-cols-2' : outfitItems.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                          {outfitItems.map((item, i) => (
+                            <div key={item.id} className={`relative rounded-xl overflow-hidden ${outfitItems.length === 4 && i === 0 ? 'col-span-2' : ''}`}>
                               {item.image_url ? (
-                                <img src={item.image_url} alt={item.name} className="w-full aspect-square object-cover rounded-xl mb-1.5 border" />
+                                <img
+                                  src={item.image_url}
+                                  alt={item.name}
+                                  className="w-full aspect-square object-cover"
+                                />
                               ) : (
-                                <div className="w-full aspect-square bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl flex items-center justify-center mb-1.5 border">
-                                  <Shirt className="h-8 w-8 text-purple-300" />
+                                <div className="w-full aspect-square bg-gradient-to-br from-purple-900/40 to-pink-900/20 flex items-center justify-center">
+                                  <Shirt className="h-10 w-10 text-purple-400/40" />
                                 </div>
                               )}
-                              <p className="text-xs font-medium truncate">{item.name}</p>
-                              <p className="text-[10px] text-muted-foreground">{item.color}</p>
+                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
+                                <p className="text-[11px] text-white font-medium truncate">{item.name}</p>
+                                <p className="text-[10px] text-white/60">{item.color}</p>
+                              </div>
                             </div>
                           ))}
                         </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground text-center">Ajoute plus de vêtements !</p>
-                      )}
+                      </div>
+                    ) : (
+                      <div className="p-4 text-center text-sm text-muted-foreground">
+                        Ajoute des photos à tes vêtements !
+                      </div>
+                    )}
 
-                      {/* Actions */}
+                    {/* Actions */}
+                    <div className="px-4 pb-4">
                       {!isWorn ? (
                         <div className="flex gap-2">
-                          <Button variant="outline" className="flex-1 text-destructive hover:text-destructive hover:bg-red-50 border-red-200" onClick={() => rejectOutfit(idx)}>
-                            <ThumbsDown className="h-4 w-4 mr-2" />Pas celle-là
-                          </Button>
-                          <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => wearOutfit(idx, outfit)}>
-                            <ThumbsUp className="h-4 w-4 mr-2" />Je la porte !
-                          </Button>
+                          <button
+                            onClick={() => rejectOutfit(idx)}
+                            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-red-800/40 text-red-400 text-sm font-semibold hover:bg-red-900/20 transition-colors"
+                          >
+                            <ThumbsDown className="h-4 w-4" />Pas celle-là
+                          </button>
+                          <button
+                            onClick={() => wearOutfit(idx, outfit)}
+                            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors"
+                          >
+                            <ThumbsUp className="h-4 w-4" />Je la porte !
+                          </button>
                         </div>
                       ) : (
                         <div className="text-center py-2">
-                          <p className="text-green-600 font-semibold text-sm">✅ Tenue sélectionnée — bon look !</p>
+                          <p className="text-emerald-400 font-semibold text-sm">✅ Tenue du jour — bon look !</p>
                         </div>
                       )}
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 );
               })
             )}
 
             {visibleOutfits.length > 0 && wornOutfit === null && (
-              <Button variant="outline" className="w-full" onClick={getSuggestion}>
-                <RefreshCw className="h-4 w-4 mr-2" />Toutes nouvelles suggestions
-              </Button>
+              <button onClick={getSuggestion} className="w-full glass text-muted-foreground py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2">
+                <RefreshCw className="h-4 w-4" />Nouvelles suggestions
+              </button>
             )}
           </div>
         )}
