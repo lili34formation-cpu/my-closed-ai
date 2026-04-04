@@ -5,6 +5,7 @@ import AuthPage from "@/pages/AuthPage";
 import ClosetPage from "@/pages/ClosetPage";
 import SuggestionPage from "@/pages/SuggestionPage";
 import StatsPage from "@/pages/StatsPage";
+import TrendsPage from "@/pages/TrendsPage";
 import NotFound from "@/pages/NotFound";
 
 function AppRoutes() {
@@ -27,6 +28,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<ClosetPage />} />
       <Route path="/suggestion" element={<SuggestionPage />} />
+      <Route path="/tendances" element={<TrendsPage />} />
       <Route path="/stats" element={<StatsPage />} />
       <Route path="/auth" element={<Navigate to="/" replace />} />
       <Route path="*" element={<NotFound />} />

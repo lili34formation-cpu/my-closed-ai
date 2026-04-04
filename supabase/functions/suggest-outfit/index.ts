@@ -17,25 +17,57 @@ Deno.serve(async (req) => {
     `- ID:${i.id} | ${i.name} | ${i.category} | ${i.color} | ${i.style} | ${i.season}${i.favorite ? ' ⭐' : ''}`
   ).join('\n');
 
-  const prompt = `Tu es un assistant mode expert. Tu dois proposer une tenue cohérente à partir du dressing suivant.
+  const currentMonth = new Date().getMonth() + 1;
+  const season = currentMonth >= 3 && currentMonth <= 5 ? 'Printemps 2026' :
+                 currentMonth >= 6 && currentMonth <= 8 ? 'Été 2026' :
+                 currentMonth >= 9 && currentMonth <= 11 ? 'Automne 2026' : 'Hiver 2025-2026';
+
+  const prompt = `Tu es un styliste expert en mode. Tu dois proposer 3 tenues différentes et cohérentes à partir du dressing fourni, en tenant compte des tendances mode actuelles.
 
 Contexte :
 - Humeur : ${mood}
 - Planning : ${planning}
 - Météo : ${weather || 'non renseignée'}
+- Saison actuelle : ${season}
+
+Tendances mode ${season} à intégrer si possible :
+- Couleurs tendance : tons terreux, beige, camel, vert olive, bleu cobalt, rouge vif
+- Styles tendance : oversize chic, layering, minimalisme élégant, sport-luxe
+- Pièces clés : blazer structuré, jean wide leg, sneakers premium, trench coat
 
 Dressing disponible :
 ${wardrobeText}
 
 Réponds en JSON avec exactement ce format :
 {
-  "itemIds": ["id1", "id2", "id3"],
-  "reasoning": "Explication courte et sympathique en français (max 2 phrases)"
+  "outfits": [
+    {
+      "name": "Nom court et inspirant de la tenue",
+      "itemIds": ["id1", "id2", "id3"],
+      "reasoning": "Explication courte et enthousiaste en français (1-2 phrases)",
+      "trendScore": 85
+    },
+    {
+      "name": "Nom court et inspirant de la tenue",
+      "itemIds": ["id1", "id2"],
+      "reasoning": "Explication courte et enthousiaste en français (1-2 phrases)",
+      "trendScore": 70
+    },
+    {
+      "name": "Nom court et inspirant de la tenue",
+      "itemIds": ["id1", "id2", "id3"],
+      "reasoning": "Explication courte et enthousiaste en français (1-2 phrases)",
+      "trendScore": 60
+    }
+  ],
+  "trendTip": "Un conseil mode tendance du moment en 1 phrase"
 }
 
 Règles :
-- Choisis 2 à 4 vêtements qui se combinent bien
-- Adapte au style de la journée et à la météo
+- Propose 3 tenues DIFFÉRENTES avec des pièces différentes
+- Chaque tenue contient 2 à 4 vêtements qui se combinent bien
+- trendScore = score de tendance de 0 à 100
+- Adapte au style de la journée, à la météo et aux tendances
 - Préfère les favoris si possible
 - Assure la cohérence des couleurs
 - Réponds UNIQUEMENT avec le JSON, sans texte avant ou après`;
@@ -49,7 +81,7 @@ Règles :
     },
     body: JSON.stringify({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 500,
+      max_tokens: 1000,
       messages: [{ role: "user", content: prompt }],
     }),
   });
@@ -61,6 +93,6 @@ Règles :
     const parsed = JSON.parse(text);
     return new Response(JSON.stringify(parsed), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch {
-    return new Response(JSON.stringify({ error: "Erreur parsing IA", itemIds: [], reasoning: "Je n'ai pas pu générer une suggestion. Réessaye !" }), { headers: corsHeaders });
+    return new Response(JSON.stringify({ error: "Erreur parsing IA", outfits: [], trendTip: "" }), { headers: corsHeaders });
   }
 });

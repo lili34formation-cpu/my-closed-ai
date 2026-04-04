@@ -5,7 +5,8 @@ import { AppSidebar } from "@/components/AppSidebar";
 
 const PAGE_TITLES: Record<string, { title: string; subtitle?: string }> = {
   "/": { title: "Mon Dressing", subtitle: "Tous tes vêtements" },
-  "/suggestion": { title: "Que porter ?", subtitle: "Suggestion du jour" },
+  "/suggestion": { title: "Que porter ?", subtitle: "3 tenues suggérées par l'IA" },
+  "/tendances": { title: "Tendances Mode", subtitle: "Ce qui est en vogue cette saison" },
   "/stats": { title: "Statistiques", subtitle: "Tes habitudes vestimentaires" },
 };
 
