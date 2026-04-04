@@ -81,18 +81,26 @@ Règles :
     },
     body: JSON.stringify({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 1000,
+      max_tokens: 1024,
       messages: [{ role: "user", content: prompt }],
     }),
   });
+
+  if (!res.ok) {
+    const errBody = await res.text();
+    console.error("Anthropic API error:", res.status, errBody);
+    return new Response(JSON.stringify({ error: `Anthropic error ${res.status}: ${errBody}` }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
 
   const data = await res.json();
   const text = data.content?.[0]?.text || '{}';
 
   try {
-    const parsed = JSON.parse(text);
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : text);
     return new Response(JSON.stringify(parsed), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch {
-    return new Response(JSON.stringify({ error: "Erreur parsing IA", outfits: [], trendTip: "" }), { headers: corsHeaders });
+    console.error("Parse error, raw text:", text);
+    return new Response(JSON.stringify({ error: "Erreur parsing IA", raw: text, outfits: [], trendTip: "" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
