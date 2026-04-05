@@ -3,7 +3,45 @@ import { AppLayout } from "@/components/AppLayout";
 import { useCloset } from "@/hooks/useCloset";
 import { ClothingItem, CONDITIONS } from "@/types/closet";
 import { toast } from "sonner";
-import { Shirt, Plus, X, Tag, ShoppingBag, ChevronRight } from "lucide-react";
+import { Shirt, Plus, X, Tag, ShoppingBag, Share2, Copy } from "lucide-react";
+
+function buildListingText(item: ClothingItem): string {
+  return [
+    `${item.name}${item.brand ? ` — ${item.brand}` : ''}`,
+    `Prix : ${item.price}€`,
+    `État : ${item.condition}`,
+    ``,
+    `Catégorie : ${item.category}`,
+    `Couleur : ${item.color}`,
+    `Style : ${item.style}`,
+    ``,
+    `Paiement sécurisé, envoi possible. N'hésitez pas à me contacter.`,
+  ].join('\n');
+}
+
+async function shareItem(item: ClothingItem) {
+  const text = buildListingText(item);
+  const title = `${item.name}${item.price ? ` — ${item.price}€` : ''}`;
+
+  if (item.image_url && navigator.canShare) {
+    try {
+      const res = await fetch(item.image_url);
+      const blob = await res.blob();
+      const file = new File([blob], 'photo.jpg', { type: blob.type });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title, text });
+        return;
+      }
+    } catch {}
+  }
+
+  if (navigator.share) {
+    await navigator.share({ title, text });
+  } else {
+    await navigator.clipboard.writeText(text);
+    toast.success('Texte copié dans le presse-papier');
+  }
+}
 
 function SellModal({ item, onClose, onConfirm }: { item: ClothingItem; onClose: () => void; onConfirm: (price: number, condition: string) => void }) {
   const [price, setPrice] = useState(item.price ? String(item.price) : '');
@@ -138,10 +176,24 @@ export default function MarchePage() {
                       <span className="text-xs font-medium px-2 py-1 bg-foreground text-background rounded-full">{item.price}€</span>
                     </div>
                   </div>
-                  <div className="p-3">
-                    <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
-                    {item.brand && <p className="text-[10px] gold uppercase tracking-widest truncate mt-0.5">{item.brand}</p>}
-                    <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wide">{item.condition}</p>
+                  <div className="p-3 space-y-2">
+                    <div>
+                      <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
+                      {item.brand && <p className="text-[10px] gold uppercase tracking-widest truncate mt-0.5">{item.brand}</p>}
+                      <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wide">{item.condition}</p>
+                    </div>
+                    <div className="flex gap-1.5">
+                      <button
+                        onClick={async () => { try { await shareItem(item); } catch {} }}
+                        className="flex-1 flex items-center justify-center gap-1 py-2 border border-border rounded-lg text-[10px] uppercase tracking-widest text-muted-foreground hover:border-foreground/20 hover:text-foreground transition-colors">
+                        <Share2 className="h-3 w-3" />Partager
+                      </button>
+                      <button
+                        onClick={async () => { await navigator.clipboard.writeText(buildListingText(item)); toast.success('Annonce copiée'); }}
+                        className="flex-1 flex items-center justify-center gap-1 py-2 border border-border rounded-lg text-[10px] uppercase tracking-widest text-muted-foreground hover:border-foreground/20 hover:text-foreground transition-colors">
+                        <Copy className="h-3 w-3" />Copier
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
