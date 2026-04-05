@@ -30,6 +30,9 @@ export const PLANNING_TYPES = [
   { value: 'autre', label: 'Autre' },
 ];
 
+export const CONDITIONS = ['Neuf', 'Très bon état', 'Bon état', 'État correct'] as const;
+export type Condition = typeof CONDITIONS[number];
+
 export interface ClothingItem {
   id: string;
   user_id: string;
@@ -44,6 +47,9 @@ export interface ClothingItem {
   worn_count: number;
   last_worn?: string;
   created_at: string;
+  for_sale?: boolean;
+  price?: number | null;
+  condition?: Condition | null;
 }
 
 export interface OutfitSuggestion {

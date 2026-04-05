@@ -4,8 +4,8 @@ import { AuthProvider, useAuth } from "@/context/AuthContext";
 import AuthPage from "@/pages/AuthPage";
 import ClosetPage from "@/pages/ClosetPage";
 import SuggestionPage from "@/pages/SuggestionPage";
-import StatsPage from "@/pages/StatsPage";
-import TrendsPage from "@/pages/TrendsPage";
+import UpcyclingPage from "@/pages/UpcyclingPage";
+import MarchePage from "@/pages/MarchePage";
 import ProfilePage from "@/pages/ProfilePage";
 import NotFound from "@/pages/NotFound";
 
@@ -29,8 +29,8 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<ClosetPage />} />
       <Route path="/suggestion" element={<SuggestionPage />} />
-      <Route path="/tendances" element={<TrendsPage />} />
-      <Route path="/stats" element={<StatsPage />} />
+      <Route path="/upcycling" element={<UpcyclingPage />} />
+      <Route path="/marche" element={<MarchePage />} />
       <Route path="/profil" element={<ProfilePage />} />
       <Route path="/auth" element={<Navigate to="/" replace />} />
       <Route path="*" element={<NotFound />} />

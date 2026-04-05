@@ -63,5 +63,13 @@ export function useCloset() {
     await updateItem(item.id, { worn_count: item.worn_count + 1, last_worn: new Date().toISOString() });
   };
 
-  return { items, loading, addItem, updateItem, deleteItem, toggleFavorite, incrementWorn, reload: loadItems };
+  const listForSale = async (item: ClothingItem, price: number, condition: string) => {
+    await updateItem(item.id, { for_sale: true, price, condition } as any);
+  };
+
+  const unlistFromSale = async (item: ClothingItem) => {
+    await updateItem(item.id, { for_sale: false, price: null, condition: null } as any);
+  };
+
+  return { items, loading, addItem, updateItem, deleteItem, toggleFavorite, incrementWorn, listForSale, unlistFromSale, reload: loadItems };
 }
