@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { CATEGORIES, SEASONS, STYLES, COLORS, Category, Season, Style, Color } from "@/types/closet";
-import { Plus, Trash2, Heart, Shirt, Search, Camera, Loader2 } from "lucide-react";
+import { Plus, Trash2, Heart, Shirt, Search, Camera, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const emptyForm = () => ({
   name: '',
@@ -29,6 +30,7 @@ export default function ClosetPage() {
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState('all');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [analyzingPhoto, setAnalyzingPhoto] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -38,8 +40,31 @@ export default function ClosetPage() {
     setPhotoPreview(URL.createObjectURL(file));
     setUploadingPhoto(true);
     const url = await uploadClothingPhoto(file, user.id);
-    if (url) setForm(f => ({ ...f, image_url: url }));
-    setUploadingPhoto(false);
+    if (url) {
+      setForm(f => ({ ...f, image_url: url }));
+      setUploadingPhoto(false);
+      // Analyse IA automatique
+      setAnalyzingPhoto(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('analyze-clothing', {
+          body: { imageUrl: url },
+        });
+        if (!error && data && !data.error) {
+          setForm(f => ({
+            ...f,
+            name: data.name || f.name,
+            category: data.category || f.category,
+            color: data.color || f.color,
+            style: data.style || f.style,
+            brand: data.brand || f.brand,
+          }));
+          toast.success('Vêtement reconnu par l\'IA');
+        }
+      } catch {}
+      setAnalyzingPhoto(false);
+    } else {
+      setUploadingPhoto(false);
+    }
   };
 
   const handleSave = async () => {
@@ -178,9 +203,12 @@ export default function ClosetPage() {
               {photoPreview ? (
                 <div className="relative rounded-xl overflow-hidden">
                   <img src={photoPreview} alt="Aperçu" className="w-full h-52 object-cover" />
-                  {uploadingPhoto && (
-                    <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
+                  {(uploadingPhoto || analyzingPhoto) && (
+                    <div className="absolute inset-0 bg-background/60 flex flex-col items-center justify-center gap-2">
                       <Loader2 className="h-6 w-6 animate-spin text-foreground" />
+                      <p className="text-[10px] uppercase tracking-widest text-foreground/80">
+                        {uploadingPhoto ? 'Upload...' : 'Analyse IA...'}
+                      </p>
                     </div>
                   )}
                   <button type="button" onClick={() => fileInputRef.current?.click()}
@@ -235,10 +263,9 @@ export default function ClosetPage() {
               ))}
             </div>
 
-            <button onClick={handleSave} disabled={uploadingPhoto}
+            <button onClick={handleSave} disabled={uploadingPhoto || analyzingPhoto}
               className="w-full h-12 bg-foreground text-background text-xs uppercase tracking-[0.2em] hover:bg-foreground/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2 rounded-xl">
-              {uploadingPhoto ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-              Ajouter au dressing
+              {analyzingPhoto ? <><Sparkles className="h-3.5 w-3.5 animate-pulse" />Analyse en cours...</> : uploadingPhoto ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Ajouter au dressing'}
             </button>
           </div>
         </DialogContent>
