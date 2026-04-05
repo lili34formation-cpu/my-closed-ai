@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import AuthPage from "@/pages/AuthPage";
+import LandingPage from "@/pages/LandingPage";
 import ClosetPage from "@/pages/ClosetPage";
 import SuggestionPage from "@/pages/SuggestionPage";
 import UpcyclingPage from "@/pages/UpcyclingPage";
@@ -20,8 +21,9 @@ function AppRoutes() {
 
   if (!user) return (
     <Routes>
+      <Route path="/" element={<LandingPage />} />
       <Route path="/auth" element={<AuthPage />} />
-      <Route path="*" element={<Navigate to="/auth" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 
