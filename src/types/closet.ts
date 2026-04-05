@@ -9,25 +9,25 @@ export const STYLES: Style[] = ['Casual', 'Professionnel', 'Sport', 'Soirée', '
 export const COLORS: Color[] = ['Blanc', 'Noir', 'Gris', 'Bleu', 'Rouge', 'Vert', 'Jaune', 'Rose', 'Orange', 'Marron', 'Beige', 'Violet', 'Autre'];
 
 export const MOODS = [
-  { value: 'joyeux', label: 'Joyeux', emoji: '😄' },
-  { value: 'decontracte', label: 'Décontracté', emoji: '😌' },
-  { value: 'fatigue', label: 'Fatigué', emoji: '😴' },
-  { value: 'professionnel', label: 'Pro & motivé', emoji: '💼' },
-  { value: 'festif', label: 'Festif', emoji: '🎉' },
-  { value: 'bad_trip', label: 'Bad trip', emoji: '😤' },
-  { value: 'romantique', label: 'Romantique', emoji: '🥰' },
-  { value: 'sportif', label: 'Sportif', emoji: '💪' },
+  { value: 'joyeux', label: 'Joyeux' },
+  { value: 'decontracte', label: 'Décontracté' },
+  { value: 'fatigue', label: 'Fatigué' },
+  { value: 'professionnel', label: 'Pro & motivé' },
+  { value: 'festif', label: 'Festif' },
+  { value: 'bad_trip', label: 'Bad trip' },
+  { value: 'romantique', label: 'Romantique' },
+  { value: 'sportif', label: 'Sportif' },
 ];
 
 export const PLANNING_TYPES = [
-  { value: 'reunion', label: 'Réunion / Travail', emoji: '👔' },
-  { value: 'journee_off', label: 'Journée off', emoji: '🏖️' },
-  { value: 'soiree', label: 'Soirée', emoji: '🥂' },
-  { value: 'sport', label: 'Sport', emoji: '🏃' },
-  { value: 'sortie', label: 'Sortie / Shopping', emoji: '🛍️' },
-  { value: 'teletravail', label: 'Télétravail', emoji: '💻' },
-  { value: 'rando', label: 'Rando / Nature', emoji: '🌿' },
-  { value: 'autre', label: 'Autre', emoji: '📅' },
+  { value: 'reunion', label: 'Réunion / Travail' },
+  { value: 'journee_off', label: 'Journée off' },
+  { value: 'soiree', label: 'Soirée' },
+  { value: 'sport', label: 'Sport' },
+  { value: 'sortie', label: 'Sortie / Shopping' },
+  { value: 'teletravail', label: 'Télétravail' },
+  { value: 'rando', label: 'Rando / Nature' },
+  { value: 'autre', label: 'Autre' },
 ];
 
 export interface ClothingItem {

@@ -212,8 +212,7 @@ export default function SuggestionPage() {
               <div className="grid grid-cols-2 gap-2">
                 {MOODS.map(m => (
                   <button key={m.value} onClick={() => setMood(m.value)}
-                    className={`flex items-center gap-3 p-3 border rounded-xl transition-all text-left ${mood === m.value ? 'border-foreground/40 bg-accent' : 'border-border hover:border-foreground/20'}`}>
-                    <span className="text-xl">{m.emoji}</span>
+                    className={`flex items-center p-3 border rounded-xl transition-all text-left ${mood === m.value ? 'border-foreground/40 bg-accent' : 'border-border hover:border-foreground/20'}`}>
                     <span className="text-xs font-light text-foreground">{m.label}</span>
                   </button>
                 ))}
@@ -226,8 +225,7 @@ export default function SuggestionPage() {
               <div className="grid grid-cols-2 gap-2">
                 {PLANNING_TYPES.map(p => (
                   <button key={p.value} onClick={() => setPlanning(p.value)}
-                    className={`flex items-center gap-3 p-3 border rounded-xl transition-all text-left ${planning === p.value ? 'border-foreground/40 bg-accent' : 'border-border hover:border-foreground/20'}`}>
-                    <span className="text-xl">{p.emoji}</span>
+                    className={`flex items-center p-3 border rounded-xl transition-all text-left ${planning === p.value ? 'border-foreground/40 bg-accent' : 'border-border hover:border-foreground/20'}`}>
                     <span className="text-xs font-light text-foreground">{p.label}</span>
                   </button>
                 ))}
