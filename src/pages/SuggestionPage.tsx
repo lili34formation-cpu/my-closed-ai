@@ -3,9 +3,10 @@ import { AppLayout } from "@/components/AppLayout";
 import { useCloset } from "@/hooks/useCloset";
 import { Button } from "@/components/ui/button";
 import { MOODS, PLANNING_TYPES, ClothingItem } from "@/types/closet";
-import { Sparkles, Loader2, Shirt, RefreshCw, Cloud, Sun, CloudRain, Thermometer, ThumbsDown, ThumbsUp, TrendingUp, Plus, X, CheckCircle, AlertCircle } from "lucide-react";
+import { Sparkles, Loader2, Shirt, RefreshCw, Cloud, Sun, CloudRain, Thermometer, ThumbsDown, ThumbsUp, TrendingUp, X, CheckCircle, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useProfile } from "@/hooks/useProfile";
 
 interface Weather { temp: number; description: string; icon: string; }
 interface Outfit { name: string; itemIds: string[]; reasoning: string; trendScore: number; }
@@ -14,6 +15,7 @@ interface OutfitReview { score: number; verdict: string; positives: string[]; im
 
 export default function SuggestionPage() {
   const { items, incrementWorn } = useCloset();
+  const { profile } = useProfile();
   const [tab, setTab] = useState<'ia' | 'moi'>('ia');
 
   // Onglet IA
@@ -62,6 +64,7 @@ export default function SuggestionPage() {
         body: {
           mood, planning,
           weather: weather ? `${weather.temp}°C, ${weather.description}` : null,
+          morphotype: profile?.morphotype ?? null,
           wardrobe: items.map(i => ({ id: i.id, name: i.name, category: i.category, color: i.color, style: i.style, season: i.season, favorite: i.favorite, brand: i.brand })),
         },
       });
@@ -142,6 +145,13 @@ export default function SuggestionPage() {
         {/* ===== ONGLET IA ===== */}
         {tab === 'ia' && (
           <div className="space-y-5">
+            {/* Bandeau morphotype manquant */}
+            {!profile?.morphotype && (
+              <a href="/profil" className="flex items-center gap-3 p-3 rounded-2xl bg-amber-900/20 border border-amber-800/30 text-amber-300 text-xs font-medium">
+                <span>👤</span>
+                <span>Renseigne ton morphotype dans ton profil pour des suggestions encore plus adaptées →</span>
+              </a>
+            )}
             {/* Météo */}
             <div className="bg-gradient-to-br from-blue-900/40 to-indigo-900/20 rounded-2xl p-4 border border-blue-800/30">
               <div className="flex items-center gap-2 mb-3">

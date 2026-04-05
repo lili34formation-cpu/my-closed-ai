@@ -1,12 +1,13 @@
 import { ReactNode } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { Shirt, Sparkles, TrendingUp, BarChart2 } from "lucide-react";
+import { Shirt, Sparkles, TrendingUp, BarChart2, User } from "lucide-react";
 
 const navItems = [
   { icon: Shirt, label: "Dressing", to: "/" },
   { icon: Sparkles, label: "Tenues", to: "/suggestion" },
   { icon: TrendingUp, label: "Tendances", to: "/tendances" },
   { icon: BarChart2, label: "Stats", to: "/stats" },
+  { icon: User, label: "Profil", to: "/profil" },
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {

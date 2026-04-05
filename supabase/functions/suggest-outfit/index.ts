@@ -8,7 +8,7 @@ const corsHeaders = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const { mood, planning, weather, wardrobe } = await req.json();
+  const { mood, planning, weather, wardrobe, morphotype } = await req.json();
 
   const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
   if (!ANTHROPIC_API_KEY) return new Response(JSON.stringify({ error: "Clé API manquante" }), { headers: corsHeaders });
@@ -29,6 +29,7 @@ Contexte :
 - Planning : ${planning}
 - Météo : ${weather || 'non renseignée'}
 - Saison actuelle : ${season}
+- Morphotype : ${morphotype || 'non renseigné'}${morphotype ? ` (adapte les suggestions pour mettre en valeur ce morphotype)` : ''}
 
 Tendances mode ${season} à intégrer si possible :
 - Couleurs tendance : tons terreux, beige, camel, vert olive, bleu cobalt, rouge vif
@@ -80,7 +81,7 @@ Règles :
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      model: "claude-3-haiku-20240307",
+      model: "claude-haiku-4-5-20251001",
       max_tokens: 1024,
       messages: [{ role: "user", content: prompt }],
     }),
