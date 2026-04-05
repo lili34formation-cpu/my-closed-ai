@@ -21,40 +21,73 @@ const MORPHOTYPE_LABELS: Record<string, string> = {
   ronde_harmonieuse: 'ronde et harmonieuse',
 };
 
-function buildMannequinPrompt(outfit: Outfit, outfitItems: ClothingItem[], morphotype?: string | null): string {
-  const pieces = outfitItems.map(i => `${i.color} ${i.name}${i.brand ? ` ${i.brand}` : ''}`).join(', ');
-  const body = morphotype ? MORPHOTYPE_LABELS[morphotype] || morphotype : 'slim';
-  return `candid street style fashion photo, real young woman with ${body} figure, wearing ${pieces}, walking in Paris, natural daylight, blurred background, film grain, Vogue editorial, photorealistic, full body shot, confident pose, 35mm lens`;
-}
+function LookbookView({ outfit, outfitItems }: { outfit: Outfit; outfitItems: ClothingItem[] }) {
+  const count = outfitItems.length;
+  if (count === 0) return null;
 
-function MannequinImage({ outfit, outfitItems, morphotype }: { outfit: Outfit; outfitItems: ClothingItem[]; morphotype?: string | null }) {
-  const [loaded, setLoaded] = useState(false);
-  const [error, setError] = useState(false);
-  const prompt = buildMannequinPrompt(outfit, outfitItems, morphotype);
-  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=768&nologo=true`;
-
-  if (error) return null;
-
-  return (
-    <div className="relative w-full aspect-[2/3] bg-muted rounded-xl overflow-hidden">
-      {!loaded && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-          <div className="animate-spin rounded-full h-5 w-5 border border-foreground border-t-transparent" />
-          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Création du look...</p>
-        </div>
-      )}
-      <img
-        src={url}
-        alt={`Look ${outfit.name}`}
-        className={`w-full h-full object-cover transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
-        onLoad={() => setLoaded(true)}
-        onError={() => setError(true)}
-      />
-      {loaded && (
+  // Layouts selon le nombre de pièces
+  if (count === 1) {
+    const item = outfitItems[0];
+    return (
+      <div className="relative w-full aspect-[3/4] rounded-xl overflow-hidden bg-muted">
+        {item.image_url
+          ? <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+          : <div className="w-full h-full flex items-center justify-center"><Shirt className="h-16 w-16 text-muted-foreground/20 stroke-[1]" /></div>
+        }
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/80 to-transparent p-3">
-          <p className="text-[9px] uppercase tracking-widest text-foreground/60">Style IA · Paris</p>
+          <p className="text-xs text-white/90 font-light">{item.name}</p>
+          {item.brand && <p className="text-[10px] gold">{item.brand}</p>}
         </div>
-      )}
+      </div>
+    );
+  }
+
+  if (count === 2) {
+    return (
+      <div className="grid grid-cols-2 gap-1.5">
+        {outfitItems.map(item => (
+          <div key={item.id} className="relative aspect-[3/4] rounded-xl overflow-hidden bg-muted">
+            {item.image_url
+              ? <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+              : <div className="w-full h-full flex items-center justify-center"><Shirt className="h-10 w-10 text-muted-foreground/20 stroke-[1]" /></div>
+            }
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/80 to-transparent p-2">
+              <p className="text-[10px] text-white/90 truncate">{item.name}</p>
+              {item.brand && <p className="text-[9px] gold truncate">{item.brand}</p>}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // 3+ pièces : grande photo principale + grille secondaire
+  const [main, ...rest] = outfitItems;
+  return (
+    <div className="space-y-1.5">
+      <div className="relative aspect-[4/3] rounded-xl overflow-hidden bg-muted">
+        {main.image_url
+          ? <img src={main.image_url} alt={main.name} className="w-full h-full object-cover" />
+          : <div className="w-full h-full flex items-center justify-center"><Shirt className="h-14 w-14 text-muted-foreground/20 stroke-[1]" /></div>
+        }
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/80 to-transparent p-3">
+          <p className="text-xs text-white/90 font-light">{main.name}</p>
+          {main.brand && <p className="text-[10px] gold">{main.brand}</p>}
+        </div>
+      </div>
+      <div className={`grid gap-1.5 ${rest.length === 1 ? 'grid-cols-1' : rest.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+        {rest.map(item => (
+          <div key={item.id} className="relative aspect-square rounded-xl overflow-hidden bg-muted">
+            {item.image_url
+              ? <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+              : <div className="w-full h-full flex items-center justify-center"><Shirt className="h-8 w-8 text-muted-foreground/20 stroke-[1]" /></div>
+            }
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/80 to-transparent p-1.5">
+              <p className="text-[9px] text-white/90 truncate">{item.name}</p>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -287,39 +320,16 @@ export default function SuggestionPage() {
                               mannequinVisible ? 'border-foreground/30 text-foreground bg-accent' : 'border-border text-muted-foreground hover:border-foreground/20'
                             }`}>
                             <User className="h-3.5 w-3.5 stroke-[1.5]" />
-                            {mannequinVisible ? 'Masquer la visualisation' : 'Voir le look porté'}
+                            {mannequinVisible ? 'Masquer le lookbook' : 'Voir le lookbook'}
                           </button>
                         </div>
 
                         {mannequinVisible && (
                           <div className="px-4 pb-3">
-                            <MannequinImage outfit={outfit} outfitItems={outfitItems} morphotype={profile?.morphotype} />
+                            <LookbookView outfit={outfit} outfitItems={outfitItems} />
                           </div>
                         )}
 
-                        {/* Photos vêtements */}
-                        {outfitItems.length > 0 && (
-                          <div className="px-4 pb-3">
-                            <p className="text-[9px] uppercase tracking-widest text-muted-foreground mb-2">Pièces</p>
-                            <div className={`grid gap-2 ${outfitItems.length === 1 ? 'grid-cols-1' : outfitItems.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
-                              {outfitItems.map(item => (
-                                <div key={item.id} className="relative rounded-xl overflow-hidden aspect-square">
-                                  {item.image_url ? (
-                                    <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
-                                  ) : (
-                                    <div className="w-full h-full bg-muted flex items-center justify-center">
-                                      <Shirt className="h-8 w-8 text-muted-foreground/20 stroke-[1]" />
-                                    </div>
-                                  )}
-                                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/80 to-transparent p-2">
-                                    <p className="text-[10px] text-white/80 truncate">{item.name}</p>
-                                    {item.brand && <p className="text-[9px] gold truncate">{item.brand}</p>}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
 
                         {/* Actions */}
                         <div className="px-4 pb-4">
