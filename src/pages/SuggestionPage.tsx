@@ -24,7 +24,7 @@ const MORPHOTYPE_LABELS: Record<string, string> = {
 function buildMannequinPrompt(outfit: Outfit, outfitItems: ClothingItem[], morphotype?: string | null): string {
   const pieces = outfitItems.map(i => `${i.color} ${i.name}${i.brand ? ` ${i.brand}` : ''}`).join(', ');
   const body = morphotype ? MORPHOTYPE_LABELS[morphotype] || morphotype : 'slim';
-  return `fashion editorial photo, full body female mannequin with ${body} body type, wearing ${pieces}, clean white studio background, high fashion photography, professional lighting, elegant pose, photorealistic, 4k`;
+  return `candid street style fashion photo, real young woman with ${body} figure, wearing ${pieces}, walking in Paris, natural daylight, blurred background, film grain, Vogue editorial, photorealistic, full body shot, confident pose, 35mm lens`;
 }
 
 function MannequinImage({ outfit, outfitItems, morphotype }: { outfit: Outfit; outfitItems: ClothingItem[]; morphotype?: string | null }) {
@@ -40,7 +40,7 @@ function MannequinImage({ outfit, outfitItems, morphotype }: { outfit: Outfit; o
       {!loaded && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
           <div className="animate-spin rounded-full h-5 w-5 border border-foreground border-t-transparent" />
-          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Génération du look...</p>
+          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Création du look...</p>
         </div>
       )}
       <img
@@ -52,7 +52,7 @@ function MannequinImage({ outfit, outfitItems, morphotype }: { outfit: Outfit; o
       />
       {loaded && (
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/80 to-transparent p-3">
-          <p className="text-[9px] uppercase tracking-widest text-foreground/60">Visualisation IA</p>
+          <p className="text-[9px] uppercase tracking-widest text-foreground/60">Style IA · Paris</p>
         </div>
       )}
     </div>
@@ -287,7 +287,7 @@ export default function SuggestionPage() {
                               mannequinVisible ? 'border-foreground/30 text-foreground bg-accent' : 'border-border text-muted-foreground hover:border-foreground/20'
                             }`}>
                             <User className="h-3.5 w-3.5 stroke-[1.5]" />
-                            {mannequinVisible ? 'Masquer le mannequin' : 'Voir sur mannequin'}
+                            {mannequinVisible ? 'Masquer la visualisation' : 'Voir le look porté'}
                           </button>
                         </div>
 
