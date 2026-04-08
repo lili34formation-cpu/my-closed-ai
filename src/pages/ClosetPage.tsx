@@ -191,14 +191,10 @@ export default function ClosetPage() {
                     <Shirt className="h-10 w-10 text-muted-foreground/20 stroke-[1]" />
                   </div>
                 )}
-                <div className="absolute top-2 right-2 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute top-2 right-2 flex flex-col gap-1.5">
                   <button onClick={() => toggleFavorite(item)}
                     className="w-7 h-7 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center">
                     <Heart className={`h-3.5 w-3.5 ${item.favorite ? 'fill-foreground text-foreground' : 'text-foreground stroke-[1.5]'}`} />
-                  </button>
-                  <button onClick={() => openEdit(item)}
-                    className="w-7 h-7 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center">
-                    <Pencil className="h-3 w-3 text-foreground stroke-[1.5]" />
                   </button>
                   <button onClick={() => deleteItem(item.id)}
                     className="w-7 h-7 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center">
@@ -217,12 +213,20 @@ export default function ClosetPage() {
                 )}
               </div>
               <div className="p-3">
-                <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
-                {item.brand && <p className="text-[10px] gold uppercase tracking-widest truncate mt-0.5">{item.brand}</p>}
-                <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wide">{item.color} · {item.category}</p>
-                {item.seasons && item.seasons.length < 4 && (
-                  <p className="text-[9px] text-muted-foreground/60 mt-0.5 uppercase tracking-wide">{item.seasons.join(' · ')}</p>
-                )}
+                <div className="flex items-start justify-between gap-1">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
+                    {item.brand && <p className="text-[10px] gold uppercase tracking-widest truncate mt-0.5">{item.brand}</p>}
+                    <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wide">{item.color} · {item.category}</p>
+                    {item.seasons && item.seasons.length < 4 && (
+                      <p className="text-[9px] text-muted-foreground/60 mt-0.5 uppercase tracking-wide">{item.seasons.join(' · ')}</p>
+                    )}
+                  </div>
+                  <button onClick={() => openEdit(item)}
+                    className="shrink-0 w-7 h-7 rounded-full border border-border flex items-center justify-center hover:border-foreground/30 transition-colors">
+                    <Pencil className="h-3 w-3 text-muted-foreground" />
+                  </button>
+                </div>
               </div>
             </div>
           ))}
