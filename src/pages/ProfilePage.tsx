@@ -5,7 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User, LogOut, Save } from "lucide-react";
+import { User, LogOut, Save, Trash2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -54,6 +54,9 @@ export default function ProfilePage() {
   const [firstName, setFirstName] = useState('');
   const [height, setHeight] = useState('');
   const [morphotype, setMorphotype] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -74,6 +77,20 @@ export default function ProfilePage() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     toast.success('Déconnecté');
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== 'SUPPRIMER') return;
+    setDeletingAccount(true);
+    try {
+      const { error } = await supabase.functions.invoke('delete-account');
+      if (error) throw error;
+      await supabase.auth.signOut();
+      toast.success('Compte supprimé');
+    } catch {
+      toast.error('Erreur lors de la suppression');
+      setDeletingAccount(false);
+    }
   };
 
   const selectedMorphotype = MORPHOTYPES.find(m => m.value === morphotype);
@@ -164,6 +181,43 @@ export default function ProfilePage() {
           className="w-full flex items-center justify-center gap-2 py-3 border border-border text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors text-[10px] uppercase tracking-widest rounded-xl">
           <LogOut className="h-3.5 w-3.5" />Déconnexion
         </button>
+
+        {/* Zone dangereuse */}
+        <div className="border border-destructive/20 rounded-xl p-4 space-y-4">
+          <p className="text-[10px] uppercase tracking-widest text-destructive flex items-center gap-2">
+            <AlertTriangle className="h-3 w-3" />Zone dangereuse
+          </p>
+          <p className="text-xs text-muted-foreground font-light">La suppression de votre compte est irréversible. Toutes vos données (dressing, suggestions, historique) seront définitivement effacées.</p>
+
+          {!showDeleteConfirm ? (
+            <button onClick={() => setShowDeleteConfirm(true)}
+              className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-destructive border border-destructive/30 px-4 py-2.5 rounded-xl hover:bg-destructive/10 transition-colors">
+              <Trash2 className="h-3 w-3" />Supprimer mon compte
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">Tapez <span className="font-mono text-foreground font-medium">SUPPRIMER</span> pour confirmer :</p>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={e => setDeleteConfirmText(e.target.value)}
+                placeholder="SUPPRIMER"
+                className="w-full bg-transparent border border-destructive/30 rounded-lg text-foreground text-sm px-3 py-2 focus:outline-none focus:border-destructive/60 transition-colors"
+              />
+              <div className="flex gap-2">
+                <button onClick={() => { setShowDeleteConfirm(false); setDeleteConfirmText(''); }}
+                  className="flex-1 py-2.5 border border-border text-muted-foreground text-[10px] uppercase tracking-widest rounded-xl hover:border-foreground/20 transition-colors">
+                  Annuler
+                </button>
+                <button onClick={handleDeleteAccount} disabled={deleteConfirmText !== 'SUPPRIMER' || deletingAccount}
+                  className="flex-1 py-2.5 bg-destructive text-destructive-foreground text-[10px] uppercase tracking-widest rounded-xl hover:bg-destructive/90 disabled:opacity-40 transition-colors flex items-center justify-center gap-2">
+                  {deletingAccount ? <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" /> : <Trash2 className="h-3 w-3" />}
+                  Confirmer
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </AppLayout>
   );

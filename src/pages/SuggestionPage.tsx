@@ -1,16 +1,20 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useCloset } from "@/hooks/useCloset";
 import { MOODS, PLANNING_TYPES, ClothingItem } from "@/types/closet";
-import { Sparkles, Loader2, Shirt, RefreshCw, Cloud, Sun, CloudRain, Thermometer, ThumbsDown, ThumbsUp, TrendingUp, X, CheckCircle, AlertCircle, User } from "lucide-react";
+import { Sparkles, Loader2, Shirt, RefreshCw, Cloud, Sun, CloudRain, Thermometer, ThumbsDown, ThumbsUp, TrendingUp, X, CheckCircle, AlertCircle, User, Snowflake, Camera, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useProfile } from "@/hooks/useProfile";
+import { useWeather } from "@/hooks/useWeather";
 
 interface Weather { temp: number; description: string; icon: string; }
 interface Outfit { name: string; itemIds: string[]; reasoning: string; trendScore: number; }
 interface SuggestionResult { outfits: Outfit[]; trendTip: string; }
 interface OutfitReview { score: number; verdict: string; positives: string[]; improvements: string[]; tip: string; }
+interface StyleProfile { style_name: string; description: string; key_elements: string[]; color_palette: string[]; silhouettes: string[]; vibe: string; }
+interface InspirationOutfit { name: string; itemIds: string[]; reasoning: string; missing?: string; }
+interface InspirationResult { styleProfile: StyleProfile; outfits: InspirationOutfit[]; style_tip: string; }
 
 const MORPHOTYPE_LABELS: Record<string, string> = {
   taille_marquee: 'taille marquée',
@@ -95,7 +99,14 @@ function LookbookView({ outfit, outfitItems }: { outfit: Outfit; outfitItems: Cl
 export default function SuggestionPage() {
   const { items, incrementWorn } = useCloset();
   const { profile } = useProfile();
-  const [tab, setTab] = useState<'ia' | 'moi'>('ia');
+  const { days: weatherDays, loading: loadingWeatherDays, error: weatherError } = useWeather();
+  const [tab, setTab] = useState<'ia' | 'moi' | 'inspire'>('ia');
+  const inspireInputRef = useRef<HTMLInputElement>(null);
+  const [inspirePreview, setInspirePreview] = useState<string | null>(null);
+  const [inspireBase64, setInspireBase64] = useState<string | null>(null);
+  const [inspireMediaType, setInspireMediaType] = useState<string>('image/jpeg');
+  const [loadingInspire, setLoadingInspire] = useState(false);
+  const [inspireResult, setInspireResult] = useState<InspirationResult | null>(null);
 
   const [mood, setMood] = useState('');
   const [planning, setPlanning] = useState('');
@@ -142,9 +153,9 @@ export default function SuggestionPage() {
       const { data, error } = await supabase.functions.invoke('suggest-outfit', {
         body: {
           mood, planning,
-          weather: weather ? `${weather.temp}°C, ${weather.description}` : null,
+          weather: weatherDays[0] ? `${weatherDays[0].tempMax}°C max, ${weatherDays[0].description}` : weather ? `${weather.temp}°C, ${weather.description}` : null,
           morphotype: profile?.morphotype ?? null,
-          wardrobe: items.map(i => ({ id: i.id, name: i.name, category: i.category, color: i.color, style: i.style, season: i.season, favorite: i.favorite, brand: i.brand })),
+          wardrobe: items.map(i => ({ id: i.id, name: i.name, category: i.category, color: i.color, style: i.style, seasons: i.seasons, favorite: i.favorite, brand: i.brand })),
         },
       });
       if (error) throw error;
@@ -166,6 +177,40 @@ export default function SuggestionPage() {
       setReview(data);
     } catch (e) { console.error(e); toast.error('Erreur lors de la validation IA'); }
     setLoadingReview(false);
+  };
+
+  const handleInspirePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setInspirePreview(URL.createObjectURL(file));
+    setInspireResult(null);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64 = result.split(',')[1];
+      setInspireBase64(base64);
+      setInspireMediaType(file.type || 'image/jpeg');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const getInspiration = async () => {
+    if (!inspireBase64) { toast.error('Ajoutez une photo'); return; }
+    if (items.length === 0) { toast.error('Ajoutez des vêtements à votre dressing'); return; }
+    setLoadingInspire(true);
+    setInspireResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('style-inspire', {
+        body: {
+          imageBase64: inspireBase64,
+          mediaType: inspireMediaType,
+          wardrobe: items.map(i => ({ id: i.id, name: i.name, category: i.category, color: i.color, style: i.style, seasons: i.seasons, brand: i.brand })),
+        },
+      });
+      if (error) throw error;
+      setInspireResult(data);
+    } catch { toast.error('Erreur analyse du style'); }
+    setLoadingInspire(false);
   };
 
   const toggleItem = (id: string) => { setMyOutfitIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]); setReview(null); };
@@ -192,11 +237,38 @@ export default function SuggestionPage() {
           <p className="text-xs text-muted-foreground uppercase tracking-widest mt-2">Suggestion IA · Mannequin virtuel</p>
         </div>
 
+        {/* Widget Météo */}
+        {loadingWeatherDays ? (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />Récupération météo...
+          </div>
+        ) : weatherError ? null : weatherDays.length > 0 && (
+          <div className="grid grid-cols-2 gap-2">
+            {weatherDays.map(day => {
+              const Icon = day.icon === 'rain' ? CloudRain : day.icon === 'snow' ? Snowflake : day.icon === 'cloud' ? Cloud : Sun;
+              return (
+                <div key={day.label} className="border border-border rounded-xl p-3 flex items-center gap-3">
+                  <Icon className={`h-6 w-6 shrink-0 stroke-[1.5] ${day.icon === 'sun' ? 'text-amber-400' : day.icon === 'rain' ? 'text-blue-400' : day.icon === 'snow' ? 'text-sky-300' : 'text-muted-foreground'}`} />
+                  <div className="min-w-0">
+                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{day.label}</p>
+                    <p className="text-sm font-medium text-foreground">{day.tempMin}° – {day.tempMax}°</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{day.description}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {/* Tabs */}
         <div className="flex border border-border rounded-xl overflow-hidden">
           <button onClick={() => setTab('ia')}
             className={`flex-1 py-2.5 text-[10px] uppercase tracking-widest transition-all ${tab === 'ia' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}>
-            <Sparkles className="h-3.5 w-3.5 inline mr-1.5" />Suggestion IA
+            <Sparkles className="h-3.5 w-3.5 inline mr-1.5" />Suggestion
+          </button>
+          <button onClick={() => setTab('inspire')}
+            className={`flex-1 py-2.5 text-[10px] uppercase tracking-widest transition-all border-l border-border ${tab === 'inspire' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}>
+            <Camera className="h-3.5 w-3.5 inline mr-1.5" />Inspirée
           </button>
           <button onClick={() => setTab('moi')}
             className={`flex-1 py-2.5 text-[10px] uppercase tracking-widest transition-all border-l border-border ${tab === 'moi' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}>
@@ -358,6 +430,115 @@ export default function SuggestionPage() {
                     <RefreshCw className="h-3.5 w-3.5 stroke-[1.5]" />Nouvelles suggestions
                   </button>
                 )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ===== ONGLET INSPIRÉE ===== */}
+        {tab === 'inspire' && (
+          <div className="space-y-6">
+            <div className="border border-border rounded-xl p-4">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Comment ça fonctionne</p>
+              <p className="text-xs text-foreground/70 font-light leading-relaxed">Importez une photo d'une influenceuse ou d'une personne dont vous aimez le style. L'IA analyse son aesthetic et compose une tenue similaire avec vos vêtements.</p>
+            </div>
+
+            {/* Upload photo */}
+            <input ref={inspireInputRef} type="file" accept="image/*" className="hidden" onChange={handleInspirePhoto} />
+            {inspirePreview ? (
+              <div className="relative rounded-xl overflow-hidden">
+                <img src={inspirePreview} alt="Style de référence" className="w-full h-64 object-cover" />
+                <button onClick={() => inspireInputRef.current?.click()}
+                  className="absolute bottom-3 right-3 bg-background/80 backdrop-blur-sm text-foreground text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-full border border-border/50">
+                  Changer
+                </button>
+                {inspireResult && (
+                  <div className="absolute top-3 left-3 bg-background/80 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                    <p className="text-[10px] uppercase tracking-widest text-foreground">{inspireResult.styleProfile.style_name}</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button onClick={() => inspireInputRef.current?.click()}
+                className="w-full h-52 rounded-xl border border-dashed border-border flex flex-col items-center justify-center gap-3 text-muted-foreground hover:border-foreground/20 transition-colors">
+                <Upload className="h-7 w-7 stroke-[1]" />
+                <div className="text-center">
+                  <p className="text-xs font-light">Photo d'inspiration</p>
+                  <p className="text-[10px] text-muted-foreground/60 mt-0.5">Influenceuse, magazine, réseaux sociaux...</p>
+                </div>
+              </button>
+            )}
+
+            {inspirePreview && (
+              <button onClick={getInspiration} disabled={loadingInspire}
+                className="w-full h-12 bg-foreground text-background text-[10px] uppercase tracking-[0.2em] hover:bg-foreground/90 disabled:opacity-40 transition-colors flex items-center justify-center gap-2 rounded-xl">
+                {loadingInspire ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Analyse du style...</> : <><Sparkles className="h-3.5 w-3.5" />Interpréter ce style</>}
+              </button>
+            )}
+
+            {/* Résultats */}
+            {inspireResult && (
+              <div className="space-y-5">
+                {/* Style analysé */}
+                <div className="border border-border rounded-xl p-4 space-y-3">
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Style détecté</p>
+                  <div>
+                    <p className="font-display text-2xl font-light text-foreground">{inspireResult.styleProfile.style_name}</p>
+                    <p className="text-xs text-foreground/70 font-light mt-1 italic">{inspireResult.styleProfile.description}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {inspireResult.styleProfile.key_elements?.map(el => (
+                      <span key={el} className="text-[10px] uppercase tracking-widest px-2.5 py-1 border border-border rounded-full text-muted-foreground">{el}</span>
+                    ))}
+                  </div>
+                  {inspireResult.styleProfile.color_palette?.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Palette</p>
+                      <div className="flex gap-1.5">
+                        {inspireResult.styleProfile.color_palette.map(c => (
+                          <span key={c} className="text-[10px] text-foreground/70 border border-border px-2 py-0.5 rounded-full">{c}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Tenues proposées */}
+                {inspireResult.outfits?.map((outfit, idx) => {
+                  const outfitItems = outfit.itemIds.map(id => items.find(i => i.id === id)).filter(Boolean) as ClothingItem[];
+                  return (
+                    <div key={idx} className="border border-border rounded-2xl overflow-hidden">
+                      <div className="p-4 space-y-2">
+                        <h3 className="font-display text-xl font-light text-foreground">{outfit.name}</h3>
+                        <p className="text-[10px] text-muted-foreground italic font-light leading-relaxed">{outfit.reasoning}</p>
+                        {outfit.missing && (
+                          <div className="flex items-start gap-2 pt-1">
+                            <AlertCircle className="h-3 w-3 text-muted-foreground/60 shrink-0 mt-0.5" />
+                            <p className="text-[10px] text-muted-foreground/60 font-light">{outfit.missing}</p>
+                          </div>
+                        )}
+                      </div>
+                      {outfitItems.length > 0 && (
+                        <div className="px-4 pb-4">
+                          <LookbookView outfit={{ ...outfit, trendScore: 0 }} outfitItems={outfitItems} />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* Conseil styliste */}
+                {inspireResult.style_tip && (
+                  <div className="flex items-start gap-3 p-4 border border-border rounded-xl">
+                    <TrendingUp className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0 stroke-[1.5]" />
+                    <p className="text-xs text-foreground/80 font-light italic">{inspireResult.style_tip}</p>
+                  </div>
+                )}
+
+                <button onClick={() => { setInspirePreview(null); setInspireBase64(null); setInspireResult(null); }}
+                  className="w-full py-3 border border-border text-muted-foreground text-[10px] uppercase tracking-widest hover:border-foreground/20 hover:text-foreground transition-colors rounded-xl">
+                  Nouvelle inspiration
+                </button>
               </div>
             )}
           </div>

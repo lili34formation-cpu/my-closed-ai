@@ -26,12 +26,14 @@ Deno.serve(async (req) => {
   "category": "une valeur parmi : Hauts, Bas, Robes & Combinaisons, Vestes & Manteaux, Chaussures, Accessoires",
   "color": "une valeur parmi : Blanc, Noir, Gris, Bleu, Rouge, Vert, Jaune, Rose, Orange, Marron, Beige, Violet, Autre",
   "style": "une valeur parmi : Casual, Professionnel, Sport, Soirée, Décontracté",
+  "seasons": ["liste des saisons adaptées parmi : Printemps, Été, Automne, Hiver — mettre plusieurs si polyvalent"],
   "brand": "marque visible sur le vêtement ou vide si non visible"
 }
 
 Règles :
-- Utilise EXACTEMENT les valeurs listées pour category, color et style
+- Utilise EXACTEMENT les valeurs listées pour category, color, style et seasons
 - Pour color, choisis la couleur dominante
+- Pour seasons, mets TOUTES les saisons où ce vêtement convient (ex: un jean basique → ["Printemps","Été","Automne","Hiver"], un maillot de bain → ["Été"], un manteau chaud → ["Automne","Hiver"])
 - name doit être court et précis (2-4 mots)
 - Réponds UNIQUEMENT avec le JSON, rien d'autre`;
 

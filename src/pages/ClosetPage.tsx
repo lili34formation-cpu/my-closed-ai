@@ -1,11 +1,10 @@
 import { useState, useMemo, useRef } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useCloset, uploadClothingPhoto } from "@/hooks/useCloset";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { CATEGORIES, SEASONS, STYLES, COLORS, Category, Season, Style, Color } from "@/types/closet";
-import { Plus, Trash2, Heart, Shirt, Search, Camera, Loader2, Sparkles } from "lucide-react";
+import { CATEGORIES, SEASONS, STYLES, COLORS, Category, Season, Style, Color, ClothingItem } from "@/types/closet";
+import { Plus, Trash2, Heart, Shirt, Search, Camera, Loader2, Sparkles, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,23 +15,51 @@ const emptyForm = () => ({
   category: 'Hauts' as Category,
   color: 'Noir' as Color,
   style: 'Casual' as Style,
-  season: 'Toutes saisons' as Season,
+  seasons: ['Printemps', 'Été', 'Automne', 'Hiver'] as Season[],
   image_url: '',
   favorite: false,
   last_worn: undefined,
 });
 
 export default function ClosetPage() {
-  const { items, loading, addItem, deleteItem, toggleFavorite } = useCloset();
+  const { items, loading, addItem, updateItem, deleteItem, toggleFavorite } = useCloset();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<ClothingItem | null>(null);
   const [form, setForm] = useState(emptyForm());
+  const [aiDetected, setAiDetected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState('all');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [analyzingPhoto, setAnalyzingPhoto] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const openAdd = () => {
+    setEditingItem(null);
+    setForm(emptyForm());
+    setPhotoPreview(null);
+    setAiDetected(new Set());
+    setOpen(true);
+  };
+
+  const openEdit = (item: ClothingItem) => {
+    setEditingItem(item);
+    setForm({
+      name: item.name,
+      brand: item.brand || '',
+      category: item.category,
+      color: item.color,
+      style: item.style,
+      seasons: item.seasons?.length ? item.seasons : ['Printemps', 'Été', 'Automne', 'Hiver'],
+      image_url: item.image_url || '',
+      favorite: item.favorite,
+      last_worn: item.last_worn,
+    });
+    setPhotoPreview(item.image_url || null);
+    setAiDetected(new Set());
+    setOpen(true);
+  };
 
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -43,22 +70,25 @@ export default function ClosetPage() {
     if (url) {
       setForm(f => ({ ...f, image_url: url }));
       setUploadingPhoto(false);
-      // Analyse IA automatique
       setAnalyzingPhoto(true);
       try {
         const { data, error } = await supabase.functions.invoke('analyze-clothing', {
           body: { imageUrl: url },
         });
         if (!error && data && !data.error) {
-          setForm(f => ({
-            ...f,
-            name: data.name || f.name,
-            category: data.category || f.category,
-            color: data.color || f.color,
-            style: data.style || f.style,
-            brand: data.brand || f.brand,
-          }));
-          toast.success('Vêtement reconnu par l\'IA');
+          const detected = new Set<string>();
+          setForm(f => {
+            const updated = { ...f };
+            if (data.name) { updated.name = data.name; detected.add('name'); }
+            if (data.category) { updated.category = data.category; detected.add('category'); }
+            if (data.color) { updated.color = data.color; detected.add('color'); }
+            if (data.style) { updated.style = data.style; detected.add('style'); }
+            if (data.brand) { updated.brand = data.brand; detected.add('brand'); }
+            if (data.seasons?.length) { updated.seasons = data.seasons; detected.add('seasons'); }
+            return updated;
+          });
+          setAiDetected(detected);
+          toast.success('Vêtement reconnu — vérifiez et complétez si besoin');
         }
       } catch {}
       setAnalyzingPhoto(false);
@@ -69,9 +99,16 @@ export default function ClosetPage() {
 
   const handleSave = async () => {
     if (!form.name) { toast.error('Nom requis'); return; }
-    await addItem(form);
+    if (editingItem) {
+      await updateItem(editingItem.id, form);
+      toast.success('Article modifié');
+    } else {
+      await addItem(form);
+    }
     setForm(emptyForm());
     setPhotoPreview(null);
+    setAiDetected(new Set());
+    setEditingItem(null);
     setOpen(false);
   };
 
@@ -159,6 +196,10 @@ export default function ClosetPage() {
                     className="w-7 h-7 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center">
                     <Heart className={`h-3.5 w-3.5 ${item.favorite ? 'fill-foreground text-foreground' : 'text-foreground stroke-[1.5]'}`} />
                   </button>
+                  <button onClick={() => openEdit(item)}
+                    className="w-7 h-7 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center">
+                    <Pencil className="h-3 w-3 text-foreground stroke-[1.5]" />
+                  </button>
                   <button onClick={() => deleteItem(item.id)}
                     className="w-7 h-7 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center">
                     <Trash2 className="h-3 w-3 text-destructive stroke-[1.5]" />
@@ -179,6 +220,9 @@ export default function ClosetPage() {
                 <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
                 {item.brand && <p className="text-[10px] gold uppercase tracking-widest truncate mt-0.5">{item.brand}</p>}
                 <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wide">{item.color} · {item.category}</p>
+                {item.seasons && item.seasons.length < 4 && (
+                  <p className="text-[9px] text-muted-foreground/60 mt-0.5 uppercase tracking-wide">{item.seasons.join(' · ')}</p>
+                )}
               </div>
             </div>
           ))}
@@ -186,15 +230,16 @@ export default function ClosetPage() {
       )}
 
       {/* FAB */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          <button className="fixed bottom-24 right-5 z-50 w-12 h-12 rounded-full bg-foreground text-background shadow-lg flex items-center justify-center hover:bg-foreground/90 transition-colors">
-            <Plus className="h-5 w-5 stroke-[1.5]" />
-          </button>
-        </DialogTrigger>
+      <button onClick={openAdd} className="fixed bottom-24 right-5 z-50 w-12 h-12 rounded-full bg-foreground text-background shadow-lg flex items-center justify-center hover:bg-foreground/90 transition-colors">
+        <Plus className="h-5 w-5 stroke-[1.5]" />
+      </button>
+
+      <Dialog open={open} onOpenChange={v => { if (!v) { setEditingItem(null); setAiDetected(new Set()); } setOpen(v); }}>
         <DialogContent className="bg-card border-border text-foreground max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-display text-2xl font-light tracking-wide">Nouvelle pièce</DialogTitle>
+            <DialogTitle className="font-display text-2xl font-light tracking-wide">
+              {editingItem ? 'Modifier la pièce' : 'Nouvelle pièce'}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-5 py-2">
             {/* Photo */}
@@ -225,20 +270,29 @@ export default function ClosetPage() {
               )}
             </div>
 
+            {analyzingPhoto && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Sparkles className="h-3.5 w-3.5 animate-pulse" />
+                L'IA identifie votre vêtement...
+              </div>
+            )}
+
             {/* Nom + Marque */}
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-1.5">Nom *</label>
-                <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
-                  placeholder="Jean slim..."
-                  className="w-full bg-transparent border-b border-border text-foreground text-sm placeholder:text-muted-foreground/40 py-2 focus:outline-none focus:border-foreground/40 transition-colors" />
-              </div>
-              <div>
-                <label className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-1.5">Marque</label>
-                <input value={form.brand} onChange={e => setForm({ ...form, brand: e.target.value })}
-                  placeholder="Zara, H&M..."
-                  className="w-full bg-transparent border-b border-border text-foreground text-sm placeholder:text-muted-foreground/40 py-2 focus:outline-none focus:border-foreground/40 transition-colors" />
-              </div>
+              {[
+                { label: 'Nom *', key: 'name', placeholder: 'Jean slim...' },
+                { label: 'Marque', key: 'brand', placeholder: 'Zara, H&M...' },
+              ].map(f => (
+                <div key={f.key}>
+                  <label className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-1.5 flex items-center gap-1">
+                    {f.label}
+                    {aiDetected.has(f.key) && <Sparkles className="h-2.5 w-2.5 text-amber-400" />}
+                  </label>
+                  <input value={(form as any)[f.key]} onChange={e => setForm({ ...form, [f.key]: e.target.value })}
+                    placeholder={f.placeholder}
+                    className={`w-full bg-transparent border-b text-foreground text-sm placeholder:text-muted-foreground/40 py-2 focus:outline-none transition-colors ${aiDetected.has(f.key) ? 'border-amber-400/50 focus:border-amber-400' : 'border-border focus:border-foreground/40'}`} />
+                </div>
+              ))}
             </div>
 
             {/* Selects */}
@@ -247,12 +301,14 @@ export default function ClosetPage() {
                 { label: 'Catégorie', key: 'category', options: CATEGORIES },
                 { label: 'Couleur', key: 'color', options: COLORS },
                 { label: 'Style', key: 'style', options: STYLES },
-                { label: 'Saison', key: 'season', options: SEASONS },
               ].map(field => (
                 <div key={field.key}>
-                  <label className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-1.5">{field.label}</label>
+                  <label className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-1.5 flex items-center gap-1">
+                    {field.label}
+                    {aiDetected.has(field.key) && <Sparkles className="h-2.5 w-2.5 text-amber-400" />}
+                  </label>
                   <Select value={(form as any)[field.key]} onValueChange={v => setForm({ ...form, [field.key]: v })}>
-                    <SelectTrigger className="bg-transparent border-b border-t-0 border-x-0 border-border rounded-none text-sm text-foreground h-9 px-0 focus:ring-0">
+                    <SelectTrigger className={`bg-transparent border-b border-t-0 border-x-0 rounded-none text-sm text-foreground h-9 px-0 focus:ring-0 ${aiDetected.has(field.key) ? 'border-amber-400/50' : 'border-border'}`}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border">
@@ -263,9 +319,47 @@ export default function ClosetPage() {
               ))}
             </div>
 
+            {/* Saisons multi-sélection */}
+            <div>
+              <label className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-2 flex items-center gap-1">
+                Saisons
+                {aiDetected.has('seasons') && <Sparkles className="h-2.5 w-2.5 text-amber-400" />}
+              </label>
+              <div className="flex gap-2 flex-wrap">
+                {SEASONS.map(s => {
+                  const active = form.seasons.includes(s);
+                  return (
+                    <button key={s} type="button"
+                      onClick={() => {
+                        const next = active
+                          ? form.seasons.filter(x => x !== s)
+                          : [...form.seasons, s];
+                        if (next.length > 0) setForm({ ...form, seasons: next as Season[] });
+                      }}
+                      className={`px-3 py-1.5 rounded-full text-[10px] uppercase tracking-widest border transition-all ${
+                        active ? 'bg-foreground text-background border-foreground' : 'border-border text-muted-foreground hover:border-foreground/30'
+                      }`}>
+                      {s}
+                    </button>
+                  );
+                })}
+              </div>
+              {form.seasons.length === 4 && (
+                <p className="text-[10px] text-muted-foreground/50 mt-1.5">Toutes saisons</p>
+              )}
+            </div>
+
+            {aiDetected.size > 0 && (
+              <p className="text-[10px] text-amber-400/80 flex items-center gap-1">
+                <Sparkles className="h-2.5 w-2.5" />Les champs marqués ont été détectés par l'IA — vérifiez et corrigez si besoin
+              </p>
+            )}
+
             <button onClick={handleSave} disabled={uploadingPhoto || analyzingPhoto}
               className="w-full h-12 bg-foreground text-background text-xs uppercase tracking-[0.2em] hover:bg-foreground/90 disabled:opacity-50 transition-colors flex items-center justify-center gap-2 rounded-xl">
-              {analyzingPhoto ? <><Sparkles className="h-3.5 w-3.5 animate-pulse" />Analyse en cours...</> : uploadingPhoto ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Ajouter au dressing'}
+              {analyzingPhoto ? <><Sparkles className="h-3.5 w-3.5 animate-pulse" />Analyse en cours...</>
+               : uploadingPhoto ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+               : editingItem ? 'Enregistrer les modifications' : 'Ajouter au dressing'}
             </button>
           </div>
         </DialogContent>

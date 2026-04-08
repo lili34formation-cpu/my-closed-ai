@@ -1,10 +1,10 @@
 export type Category = 'Hauts' | 'Bas' | 'Robes & Combinaisons' | 'Vestes & Manteaux' | 'Chaussures' | 'Accessoires';
-export type Season = 'Printemps' | 'Été' | 'Automne' | 'Hiver' | 'Toutes saisons';
+export type Season = 'Printemps' | 'Été' | 'Automne' | 'Hiver';
 export type Style = 'Casual' | 'Professionnel' | 'Sport' | 'Soirée' | 'Décontracté';
 export type Color = 'Blanc' | 'Noir' | 'Gris' | 'Bleu' | 'Rouge' | 'Vert' | 'Jaune' | 'Rose' | 'Orange' | 'Marron' | 'Beige' | 'Violet' | 'Autre';
 
 export const CATEGORIES: Category[] = ['Hauts', 'Bas', 'Robes & Combinaisons', 'Vestes & Manteaux', 'Chaussures', 'Accessoires'];
-export const SEASONS: Season[] = ['Printemps', 'Été', 'Automne', 'Hiver', 'Toutes saisons'];
+export const SEASONS: Season[] = ['Printemps', 'Été', 'Automne', 'Hiver'];
 export const STYLES: Style[] = ['Casual', 'Professionnel', 'Sport', 'Soirée', 'Décontracté'];
 export const COLORS: Color[] = ['Blanc', 'Noir', 'Gris', 'Bleu', 'Rouge', 'Vert', 'Jaune', 'Rose', 'Orange', 'Marron', 'Beige', 'Violet', 'Autre'];
 
@@ -41,7 +41,7 @@ export interface ClothingItem {
   category: Category;
   color: Color;
   style: Style;
-  season: Season;
+  seasons: Season[];
   image_url?: string;
   favorite: boolean;
   worn_count: number;

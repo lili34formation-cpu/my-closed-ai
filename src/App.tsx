@@ -7,6 +7,8 @@ import ClosetPage from "@/pages/ClosetPage";
 import SuggestionPage from "@/pages/SuggestionPage";
 import UpcyclingPage from "@/pages/UpcyclingPage";
 import MarchePage from "@/pages/MarchePage";
+import TrendsPage from "@/pages/TrendsPage";
+import StatsPage from "@/pages/StatsPage";
 import ProfilePage from "@/pages/ProfilePage";
 import NotFound from "@/pages/NotFound";
 
@@ -33,6 +35,8 @@ function AppRoutes() {
       <Route path="/suggestion" element={<SuggestionPage />} />
       <Route path="/upcycling" element={<UpcyclingPage />} />
       <Route path="/marche" element={<MarchePage />} />
+      <Route path="/tendances" element={<TrendsPage />} />
+      <Route path="/stats" element={<StatsPage />} />
       <Route path="/profil" element={<ProfilePage />} />
       <Route path="/auth" element={<Navigate to="/" replace />} />
       <Route path="*" element={<NotFound />} />
