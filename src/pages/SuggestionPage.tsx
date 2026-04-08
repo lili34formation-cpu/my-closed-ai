@@ -184,14 +184,21 @@ export default function SuggestionPage() {
     if (!file) return;
     setInspirePreview(URL.createObjectURL(file));
     setInspireResult(null);
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      const base64 = result.split(',')[1];
-      setInspireBase64(base64);
-      setInspireMediaType(file.type || 'image/jpeg');
+    // Resize to max 800px before converting to base64
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 800;
+      const ratio = Math.min(MAX / img.width, MAX / img.height, 1);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * ratio);
+      canvas.height = Math.round(img.height * ratio);
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      setInspireBase64(dataUrl.split(',')[1]);
+      setInspireMediaType('image/jpeg');
     };
-    reader.readAsDataURL(file);
+    img.src = URL.createObjectURL(file);
   };
 
   const getInspiration = async () => {
