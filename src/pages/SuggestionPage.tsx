@@ -2,11 +2,12 @@ import { useState, useRef } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useCloset } from "@/hooks/useCloset";
 import { MOODS, PLANNING_TYPES, ClothingItem } from "@/types/closet";
-import { Sparkles, Loader2, Shirt, RefreshCw, Cloud, Sun, CloudRain, Thermometer, ThumbsDown, ThumbsUp, TrendingUp, X, CheckCircle, AlertCircle, User, Snowflake, Camera, Upload } from "lucide-react";
+import { Sparkles, Loader2, Shirt, RefreshCw, Cloud, Sun, CloudRain, Thermometer, ThumbsDown, ThumbsUp, TrendingUp, X, CheckCircle, AlertCircle, User, Snowflake, Camera, Upload, History } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useProfile } from "@/hooks/useProfile";
 import { useWeather } from "@/hooks/useWeather";
+import { useOutfitHistory } from "@/hooks/useOutfitHistory";
 
 interface Weather { temp: number; description: string; icon: string; }
 interface Outfit { name: string; itemIds: string[]; reasoning: string; trendScore: number; }
@@ -100,7 +101,8 @@ export default function SuggestionPage() {
   const { items, incrementWorn } = useCloset();
   const { profile } = useProfile();
   const { days: weatherDays, loading: loadingWeatherDays, error: weatherError } = useWeather();
-  const [tab, setTab] = useState<'ia' | 'moi' | 'inspire'>('ia');
+  const { history: outfitHistory, saveOutfit } = useOutfitHistory();
+  const [tab, setTab] = useState<'ia' | 'moi' | 'inspire' | 'historique'>('ia');
   const inspireInputRef = useRef<HTMLInputElement>(null);
   const [inspirePreview, setInspirePreview] = useState<string | null>(null);
   const [inspireBase64, setInspireBase64] = useState<string | null>(null);
@@ -225,6 +227,7 @@ export default function SuggestionPage() {
   const wearOutfit = async (idx: number, outfit: Outfit) => {
     setWornOutfit(idx);
     for (const id of outfit.itemIds) { const item = items.find(i => i.id === id); if (item) await incrementWorn(item); }
+    await saveOutfit(outfit.name, outfit.itemIds);
     toast.success(`Look "${outfit.name}" enregistré`);
   };
   const toggleMannequin = (idx: number) => setShowMannequin(prev => { const s = new Set(prev); s.has(idx) ? s.delete(idx) : s.add(idx); return s; });
@@ -280,6 +283,10 @@ export default function SuggestionPage() {
           <button onClick={() => setTab('moi')}
             className={`flex-1 py-2.5 text-[10px] uppercase tracking-widest transition-all border-l border-border ${tab === 'moi' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}>
             <Shirt className="h-3.5 w-3.5 inline mr-1.5" />Ma tenue
+          </button>
+          <button onClick={() => setTab('historique')}
+            className={`flex-1 py-2.5 text-[10px] uppercase tracking-widest transition-all border-l border-border ${tab === 'historique' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}>
+            <History className="h-3.5 w-3.5 inline mr-1.5" />Historique
           </button>
         </div>
 
@@ -655,6 +662,53 @@ export default function SuggestionPage() {
                   </div>
                 )}
               </div>
+            )}
+          </div>
+        )}
+
+        {/* ===== ONGLET HISTORIQUE ===== */}
+        {tab === 'historique' && (
+          <div className="space-y-4">
+            {outfitHistory.length === 0 ? (
+              <div className="text-center py-16 text-muted-foreground text-sm font-light">
+                Aucune tenue enregistrée pour l'instant
+              </div>
+            ) : (
+              outfitHistory.map(entry => {
+                const entryItems = entry.item_ids.map(id => items.find(i => i.id === id)).filter(Boolean) as ClothingItem[];
+                const date = new Date(entry.worn_at);
+                const label = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+                return (
+                  <div key={entry.id} className="border border-border rounded-2xl overflow-hidden">
+                    <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-foreground">{entry.name}</p>
+                        <p className="text-[10px] text-muted-foreground capitalize">{label}</p>
+                      </div>
+                      <p className="text-[9px] uppercase tracking-widest text-muted-foreground">{entry.item_ids.length} pièce{entry.item_ids.length > 1 ? 's' : ''}</p>
+                    </div>
+                    <div className="px-4 pb-4">
+                      {entryItems.length > 0 ? (
+                        <div className="flex gap-2 overflow-x-auto pb-1">
+                          {entryItems.map(item => (
+                            <div key={item.id} className="shrink-0 w-16">
+                              <div className="w-16 h-16 rounded-xl overflow-hidden bg-muted">
+                                {item.image_url
+                                  ? <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                                  : <div className="w-full h-full flex items-center justify-center"><Shirt className="h-6 w-6 text-muted-foreground/20 stroke-[1]" /></div>
+                                }
+                              </div>
+                              <p className="text-[9px] text-muted-foreground truncate mt-1 text-center">{item.name}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[10px] text-muted-foreground italic">Pièces supprimées du dressing</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
         )}

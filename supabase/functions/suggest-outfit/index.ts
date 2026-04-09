@@ -71,6 +71,7 @@ Règles :
 - Adapte au style de la journée, à la météo et aux tendances
 - Préfère les favoris si possible
 - Assure la cohérence des couleurs
+- OBLIGATOIRE : si une tenue inclut un vêtement de catégorie "Vestes & Manteaux", elle DOIT aussi inclure un "Hauts" (t-shirt, chemise, pull, top...). Ne jamais mettre un manteau ou une veste sans haut dessous.
 - Réponds UNIQUEMENT avec le JSON, sans texte avant ou après`;
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
